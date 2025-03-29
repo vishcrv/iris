@@ -422,6 +422,7 @@ export function MainContent({ initialActiveTab, onTabChange }: MainContentProps)
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
   const dbReady = useRef(false);
 
@@ -821,8 +822,12 @@ export function MainContent({ initialActiveTab, onTabChange }: MainContentProps)
 
   // Handle timeupdate event from media player
   const handleTimeUpdate = () => {
-    if (audioRef.current) {
-      updateCurrentWord(audioRef.current.currentTime);
+    const mediaElement = currentMeeting?.blob?.type.includes('video') 
+      ? videoRef.current 
+      : audioRef.current;
+      
+    if (mediaElement) {
+      updateCurrentWord(mediaElement.currentTime);
     }
   };
 
@@ -845,8 +850,12 @@ export function MainContent({ initialActiveTab, onTabChange }: MainContentProps)
                     : "px-[1px]"
                 )}
                 onClick={() => {
-                  if (audioRef.current) {
-                    audioRef.current.currentTime = timing.start;
+                  const mediaElement = currentMeeting?.blob?.type.includes('video') 
+                    ? videoRef.current 
+                    : audioRef.current;
+                    
+                  if (mediaElement) {
+                    mediaElement.currentTime = timing.start;
                   }
                 }}
                 style={{ cursor: "pointer" }}
@@ -1083,7 +1092,7 @@ export function MainContent({ initialActiveTab, onTabChange }: MainContentProps)
                 <div className="aspect-video bg-black rounded-lg overflow-hidden">
                   {currentMeeting.blob?.type.includes('video') ? (
                     <video
-                      ref={audioRef}
+                      ref={videoRef}
                       src={currentMeeting.url}
                       controls
                       className="w-full h-full"
