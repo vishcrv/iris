@@ -419,11 +419,12 @@ export function MainContent({ initialActiveTab, onTabChange }: MainContentProps)
   const [userMessage, setUserMessage] = useState('');
   const [editingSection, setEditingSection] = useState<'summary' | 'discussions' | 'tasks' | null>(null);
   const [editContent, setEditContent] = useState('');
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [newTaskTitle, setNewTaskTitle] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
   const dbReady = useRef(false);
-  const tasks = useRef<Task[]>([]);
 
   // Update activeTab when initialActiveTab changes
   useEffect(() => {
