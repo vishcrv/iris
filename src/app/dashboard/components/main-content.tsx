@@ -409,7 +409,6 @@ export function MainContent({ initialActiveTab, onTabChange }: MainContentProps)
   const [isLoading, setIsLoading] = useState(true);
   const [currentMeeting, setCurrentMeeting] = useState<Meeting | null>(null);
   const [currentWord, setCurrentWord] = useState<number>(-1);
-  const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(null);
   const [chatState, setChatState] = useState<ChatState>({
     isOpen: false,
     meetingId: null,
@@ -822,8 +821,8 @@ export function MainContent({ initialActiveTab, onTabChange }: MainContentProps)
 
   // Handle timeupdate event from media player
   const handleTimeUpdate = () => {
-    if (audioElement) {
-      updateCurrentWord(audioElement.currentTime);
+    if (audioRef.current) {
+      updateCurrentWord(audioRef.current.currentTime);
     }
   };
 
@@ -846,8 +845,8 @@ export function MainContent({ initialActiveTab, onTabChange }: MainContentProps)
                     : "px-[1px]"
                 )}
                 onClick={() => {
-                  if (audioElement) {
-                    audioElement.currentTime = timing.start;
+                  if (audioRef.current) {
+                    audioRef.current.currentTime = timing.start;
                   }
                 }}
                 style={{ cursor: "pointer" }}
@@ -1084,7 +1083,7 @@ export function MainContent({ initialActiveTab, onTabChange }: MainContentProps)
                 <div className="aspect-video bg-black rounded-lg overflow-hidden">
                   {currentMeeting.blob?.type.includes('video') ? (
                     <video
-                      ref={audioElement as React.RefObject<HTMLVideoElement>}
+                      ref={audioRef}
                       src={currentMeeting.url}
                       controls
                       className="w-full h-full"
@@ -1093,7 +1092,7 @@ export function MainContent({ initialActiveTab, onTabChange }: MainContentProps)
                   ) : (
                     <div className="w-full h-full flex items-center justify-center bg-primary/10">
                       <audio
-                        ref={audioElement as React.RefObject<HTMLAudioElement>}
+                        ref={audioRef}
                         src={currentMeeting.url}
                         controls
                         className="w-full px-4"
