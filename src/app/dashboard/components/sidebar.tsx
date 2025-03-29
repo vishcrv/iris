@@ -7,8 +7,6 @@ import {
   CheckSquare,
   Settings,
   BarChart2,
-  Users,
-  User,
 } from "lucide-react";
 import { useUser, UserButton } from "@clerk/nextjs";
 

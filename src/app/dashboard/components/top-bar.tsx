@@ -1,6 +1,6 @@
 "use client";
 
-import { Sun, Moon, LogOut, Settings, User, Coffee, Sun as SunIcon, Moon as MoonIcon, Sunrise, Clock } from "lucide-react";
+import { Sun, Moon, LogOut, Settings, User, Sun as SunIcon, Moon as MoonIcon, Sunrise, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "next-themes";
 import { useUser, useClerk } from "@clerk/nextjs";
@@ -15,6 +15,7 @@ import {
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
+import Image from "next/image";
 
 const quotes = [
   "Turn your meetings into actionable insights",
@@ -160,10 +161,12 @@ export function TopBar() {
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="sm" className="gap-2">
                 {user?.imageUrl ? (
-                  <img 
+                  <Image 
                     src={user.imageUrl} 
                     alt="Profile" 
                     className="h-6 w-6 rounded-full bg-muted object-cover" 
+                    width={24}
+                    height={24}
                   />
                 ) : (
                   <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center">

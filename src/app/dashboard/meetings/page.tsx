@@ -40,7 +40,10 @@ export default function MeetingsPage() {
 
   // Initialize IndexedDB and load meetings
   useEffect(() => {
-    loadMeetingsFromDB();
+    const loadData = async () => {
+      await loadMeetingsFromDB();
+    };
+    loadData();
   }, []);
 
   const openDB = (): Promise<IDBDatabase> => {

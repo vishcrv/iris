@@ -49,6 +49,23 @@ const languageNames: Record<string, string> = {
   'et': 'Estonian',
 };
 
+// Define proper types for Whisper API responses
+interface WhisperDetectionResponse {
+  language: string;
+  text: string;
+  words?: WhisperWord[];
+}
+
+interface WhisperWord {
+  word: string;
+  start: number;
+  end: number;
+}
+
+interface WhisperTranslationResponse {
+  text: string;
+}
+
 export async function POST(request: Request) {
   try {
     const formData = await request.formData();
@@ -80,7 +97,7 @@ export async function POST(request: Request) {
           // Let Whisper detect the language automatically by not specifying a language
         });
 
-        const detectedLanguage = (detection as any).language || 'en';
+        const detectedLanguage = (detection as WhisperDetectionResponse).language || 'en';
         const detectedLanguageName = languageNames[detectedLanguage.toLowerCase()] || detectedLanguage;
 
         return NextResponse.json({
@@ -124,12 +141,12 @@ export async function POST(request: Request) {
       });
       
       // Get the detected language from the response
-      language = (transcription as any).language || language;
+      language = (transcription as WhisperDetectionResponse).language || language;
     }
 
     // Process the response to create word timings
     // Note: Word timings are only available for transcriptions, not translations
-    const wordTimings = !shouldTranslate ? (transcription as any).words?.map((word: any) => ({
+    const wordTimings = !shouldTranslate ? (transcription as WhisperDetectionResponse).words?.map((word: WhisperWord) => ({
       word: word.word,
       start: word.start,
       end: word.end
@@ -137,7 +154,9 @@ export async function POST(request: Request) {
 
     // Return both the full transcript and word timings
     return NextResponse.json({
-      transcript: (transcription as any).text,
+      transcript: shouldTranslate 
+        ? (transcription as WhisperTranslationResponse).text 
+        : (transcription as WhisperDetectionResponse).text,
       wordTimings: wordTimings,
       isTranslated: shouldTranslate,
       language: language,

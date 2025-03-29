@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Upload, FileAudio, Clock, CheckCircle, Play, Trash2, X, PlusCircle, Loader2, MessageSquare, ListTodo, FileText, MoreVertical, BrainCircuit, Send, User, Edit, Check, Sun, Moon, LogOut, Coffee, Mail } from "lucide-react";
+import { Upload, FileAudio, Clock, CheckCircle, Play, Trash2, X, PlusCircle, Loader2, MessageSquare, ListTodo, FileText, MoreVertical, BrainCircuit, Send, User as UserIcon, Edit, Check, Sun, Moon, LogOut, Coffee, Mail } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -56,7 +56,7 @@ type TabContentProps = {
   isLoading: boolean;
   onTabChange: (tab: TabType) => void;
   isSignedIn: boolean;
-  user: any;
+  user: Record<string, unknown>;
   fileInputRef: React.RefObject<HTMLInputElement | null>;
   isUploading: boolean;
   isTranscribing: boolean;
@@ -332,7 +332,7 @@ function TabContent({
                 <div className="flex flex-col space-y-3">
                   <label className="text-sm font-medium text-muted-foreground">Full Name</label>
                   <div className="flex items-center gap-4 p-3 rounded-lg border bg-card">
-                    <User className="h-5 w-5 text-muted-foreground" />
+                    <UserIcon className="h-5 w-5 text-muted-foreground" />
                     <span className="font-medium">{user?.fullName || 'Not set'}</span>
                   </div>
                 </div>
@@ -395,20 +395,16 @@ export function MainContent({ initialActiveTab, onTabChange }: MainContentProps)
   const { signOut } = useClerk();
   const { theme, setTheme } = useTheme();
   const router = useRouter();
-  const [uploadedFiles, setUploadedFiles] = useState<Meeting[]>([]);
-  const [currentlyPlaying, setCurrentlyPlaying] = useState<Meeting | null>(null);
-  const [currentWordIndex, setCurrentWordIndex] = useState<number>(-1);
-  const mediaRef = useRef<HTMLVideoElement | HTMLAudioElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [dbReady, setDbReady] = useState(false);
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [newTaskTitle, setNewTaskTitle] = useState("");
-  const [isTranscribing, setIsTranscribing] = useState(false);
-  const [transcriptionProgress, setTranscriptionProgress] = useState(0);
-  const [uploadProgress, setUploadProgress] = useState(0);
-  const [isUploading, setIsUploading] = useState(false);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [activeTab, setActiveTab] = useState<TabType>(initialActiveTab);
+  const [meetings, setMeetings] = useState<Meeting[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
+  const [isTranscribing, setIsTranscribing] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [transcriptionProgress, setTranscriptionProgress] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
+  const [currentMeeting, setCurrentMeeting] = useState<Meeting | null>(null);
+  const [currentWord, setCurrentWord] = useState<number>(-1);
+  const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(null);
   const [chatState, setChatState] = useState<ChatState>({
     isOpen: false,
     meetingId: null,
@@ -416,24 +412,13 @@ export function MainContent({ initialActiveTab, onTabChange }: MainContentProps)
     isLoading: false
   });
   const [userMessage, setUserMessage] = useState('');
-  const [isEditing, setIsEditing] = useState<{
-    discussions: boolean;
-    summary: boolean;
-    tasks: boolean;
-  }>({
-    discussions: false,
-    summary: false,
-    tasks: false,
-  });
-  const [editableContent, setEditableContent] = useState<{
-    discussions: string;
-    summary: string;
-    tasks: string;
-  }>({
-    discussions: '',
-    summary: '',
-    tasks: '',
-  });
+  const [editingSection, setEditingSection] = useState<'summary' | 'discussions' | 'tasks' | null>(null);
+  const [editContent, setEditContent] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
+  const audioRef = useRef<HTMLAudioElement>(null);
+  const dbReady = useRef(false);
+  const tasks = useRef<Task[]>([]);
 
   // Update activeTab when initialActiveTab changes
   useEffect(() => {
@@ -467,27 +452,23 @@ export function MainContent({ initialActiveTab, onTabChange }: MainContentProps)
 
   // Initialize IndexedDB
   useEffect(() => {
-    const request = indexedDB.open('meetingsDB', 2);
-
-    request.onerror = (event) => {
-      console.error("Database error:", event);
-    };
-
-    request.onupgradeneeded = (event: IDBVersionChangeEvent) => {
-      const db = (event.target as IDBOpenDBRequest).result;
-      if (!db.objectStoreNames.contains('meetings')) {
-        db.createObjectStore('meetings', { keyPath: 'id' });
+    const init = async () => {
+      setIsLoading(true);
+      try {
+        await Promise.all([loadMeetingsFromDB(), loadTasksFromDB()]);
+      } catch (error) {
+        console.error("Failed to initialize data:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load data",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
       }
-      if (!db.objectStoreNames.contains('tasks')) {
-        db.createObjectStore('tasks', { keyPath: 'id' });
-      }
     };
-
-    request.onsuccess = (event) => {
-      setDbReady(true);
-      loadMeetingsFromDB();
-      loadTasksFromDB();
-    };
+    
+    init();
   }, []);
 
   // Load meetings from IndexedDB
@@ -504,7 +485,7 @@ export function MainContent({ initialActiveTab, onTabChange }: MainContentProps)
           meeting.url = URL.createObjectURL(meeting.blob);
         }
       });
-      setUploadedFiles(meetings);
+      setMeetings(meetings);
     };
   };
 
@@ -536,7 +517,7 @@ export function MainContent({ initialActiveTab, onTabChange }: MainContentProps)
   const handleDeleteMeeting = async (meeting: Meeting) => {
     try {
       await deleteMeetingFromDB(meeting.id);
-      setUploadedFiles(prev => prev.filter(m => m.id !== meeting.id));
+      setMeetings(prev => prev.filter(m => m.id !== meeting.id));
       
       // Revoke the object URL to free up memory
       if (meeting.url) {
@@ -607,7 +588,7 @@ export function MainContent({ initialActiveTab, onTabChange }: MainContentProps)
       };
 
       // Add to state
-      setUploadedFiles(prev => [...prev, newMeeting]);
+      setMeetings(prev => [...prev, newMeeting]);
       
       // Create FormData
       const formData = new FormData();
@@ -665,7 +646,7 @@ export function MainContent({ initialActiveTab, onTabChange }: MainContentProps)
       const data = await response.json();
       
       // Update the meeting object with transcription data
-      setUploadedFiles(prev => prev.map(meeting => {
+      setMeetings(prev => prev.map(meeting => {
         if (meeting.id === meetingId) {
           return {
             ...meeting,
@@ -693,7 +674,7 @@ export function MainContent({ initialActiveTab, onTabChange }: MainContentProps)
       console.error('Upload error:', error);
       
       // Update the meeting status to error
-      setUploadedFiles(prev => prev.map(meeting => {
+      setMeetings(prev => prev.map(meeting => {
         if (meeting.id === meetingId) {
           return {
             ...meeting,
@@ -718,7 +699,7 @@ export function MainContent({ initialActiveTab, onTabChange }: MainContentProps)
 
   const analyzeMeeting = async (meetingId: string, transcript: string): Promise<void> => {
     try {
-      setIsAnalyzing(true);
+      setIsTranscribing(true);
       
       const response = await fetch('/api/analyze', {
         method: 'POST',
@@ -735,7 +716,7 @@ export function MainContent({ initialActiveTab, onTabChange }: MainContentProps)
       const analysisData = await response.json();
       
       // Update the meeting with analysis results
-      setUploadedFiles(prev => prev.map(meeting => {
+      setMeetings(prev => prev.map(meeting => {
         if (meeting.id === meetingId) {
           return {
             ...meeting,
@@ -753,12 +734,12 @@ export function MainContent({ initialActiveTab, onTabChange }: MainContentProps)
         variant: "destructive"
       });
     } finally {
-      setIsAnalyzing(false);
+      setIsTranscribing(false);
     }
   };
 
   const handlePlayMedia = async (meeting: Meeting) => {
-    setCurrentlyPlaying(meeting);
+    setCurrentMeeting(meeting);
     if (meeting.transcript && !meeting.analysis) {
       await analyzeMeeting(meeting.id, meeting.transcript);
     }
@@ -825,42 +806,42 @@ export function MainContent({ initialActiveTab, onTabChange }: MainContentProps)
 
   // Function to update current word based on video time
   const updateCurrentWord = (currentTime: number) => {
-    if (currentlyPlaying?.wordTimings) {
-      const index = currentlyPlaying.wordTimings.findIndex(
+    if (currentMeeting?.wordTimings) {
+      const index = currentMeeting.wordTimings.findIndex(
         (timing) => currentTime >= timing.start && currentTime <= timing.end
       );
-      setCurrentWordIndex(index);
+      setCurrentWord(index);
     }
   };
 
   // Handle timeupdate event from media player
   const handleTimeUpdate = () => {
-    if (mediaRef.current) {
-      updateCurrentWord(mediaRef.current.currentTime);
+    if (audioElement) {
+      updateCurrentWord(audioElement.currentTime);
     }
   };
 
   // Update the transcript display section
   const renderTranscript = () => {
-    if (!currentlyPlaying?.transcript) return null;
+    if (!currentMeeting?.transcript) return null;
 
     // If we have word timings (non-translated content), show interactive transcript
-    if (currentlyPlaying.wordTimings && currentlyPlaying.wordTimings.length > 0) {
-  return (
+    if (currentMeeting.wordTimings && currentMeeting.wordTimings.length > 0) {
+      return (
         <div className="prose prose-sm max-w-none dark:prose-invert">
           <p className="leading-relaxed">
-            {currentlyPlaying.wordTimings.map((timing, index) => (
+            {currentMeeting.wordTimings.map((timing, index) => (
               <span
                 key={index}
                 className={cn(
                   "inline-block transition-colors duration-200",
-                  index === currentWordIndex
+                  index === currentWord
                     ? "bg-primary/20 rounded px-1"
                     : "px-[1px]"
                 )}
                 onClick={() => {
-                  if (mediaRef.current) {
-                    mediaRef.current.currentTime = timing.start;
+                  if (audioElement) {
+                    audioElement.currentTime = timing.start;
                   }
                 }}
                 style={{ cursor: "pointer" }}
@@ -876,20 +857,20 @@ export function MainContent({ initialActiveTab, onTabChange }: MainContentProps)
     // For translated content or transcripts without word timings
     return (
       <div className="prose prose-sm max-w-none dark:prose-invert">
-        {currentlyPlaying.transcript.split('\n').map((paragraph, index) => (
+        {currentMeeting.transcript.split('\n').map((paragraph, index) => (
           <p key={index} className="mb-4 leading-relaxed">
             {paragraph}
           </p>
         ))}
-        {currentlyPlaying.wordTimings?.length === 0 && (
+        {currentMeeting.wordTimings?.length === 0 && (
           <div className="mt-4 p-2 bg-muted rounded-md">
             <p className="text-xs text-muted-foreground">
-              {currentlyPlaying.isTranslated 
-                ? `This content was translated from ${currentlyPlaying.languageName || currentlyPlaying.language || 'another language'} to English.` 
-                : `This content is in ${currentlyPlaying.languageName || currentlyPlaying.language || 'the original language'}.`}
+              {currentMeeting.isTranslated 
+                ? `This content was translated from ${currentMeeting.languageName || currentMeeting.language || 'another language'} to English.` 
+                : `This content is in ${currentMeeting.languageName || currentMeeting.language || 'the original language'}.`}
             </p>
             <p className="text-xs text-muted-foreground mt-1">
-              {currentlyPlaying.isTranslated 
+              {currentMeeting.isTranslated 
                 ? "Word-level timing information is not available for translated content." 
                 : "Word-level timing information is not available for this transcript."}
             </p>
@@ -920,7 +901,7 @@ export function MainContent({ initialActiveTab, onTabChange }: MainContentProps)
   const handleSendMessage = async () => {
     if (!userMessage.trim() || !chatState.meetingId) return;
 
-    const meeting = uploadedFiles.find(m => m.id === chatState.meetingId);
+    const meeting = meetings.find(m => m.id === chatState.meetingId);
     if (!meeting?.transcript) return;
 
     const newMessage: Message = { role: 'user', content: userMessage };
@@ -995,28 +976,28 @@ export function MainContent({ initialActiveTab, onTabChange }: MainContentProps)
   };
 
   const handleEditSave = async (section: 'discussions' | 'summary' | 'tasks') => {
-    if (!currentlyPlaying) return;
+    if (!currentMeeting) return;
 
     try {
       const updatedMeeting = {
-        ...currentlyPlaying,
+        ...currentMeeting,
         analysis: {
-          ...currentlyPlaying.analysis,
-          [section]: editableContent[section],
+          ...currentMeeting.analysis,
+          [section]: editContent,
         },
       };
 
       // Update state
-      setUploadedFiles(prev =>
-        prev.map(m => m.id === currentlyPlaying.id ? updatedMeeting : m)
+      setMeetings(prev =>
+        prev.map(m => m.id === currentMeeting.id ? updatedMeeting : m)
       );
-      setCurrentlyPlaying(updatedMeeting);
+      setCurrentMeeting(updatedMeeting);
 
       // Save to IndexedDB
       await saveMeetingToDB(updatedMeeting);
 
       // Exit edit mode
-      setIsEditing(prev => ({ ...prev, [section]: false }));
+      setEditingSection(null);
 
       toast({
         title: "Changes saved",
@@ -1050,11 +1031,11 @@ export function MainContent({ initialActiveTab, onTabChange }: MainContentProps)
       <div className="flex-1 overflow-y-auto">
         <TabContent
           activeTab={activeTab}
-          meetings={uploadedFiles}
+          meetings={meetings}
           onMeetingDelete={handleDeleteMeeting}
           onMeetingPlay={handlePlayMedia}
           onAskAI={handleAskAI}
-          isLoading={isUploading || isTranscribing}
+          isLoading={isLoading}
           onTabChange={handleTabChange}
           isSignedIn={!!isSignedIn}
           user={user}
@@ -1071,22 +1052,22 @@ export function MainContent({ initialActiveTab, onTabChange }: MainContentProps)
       </div>
 
       {/* Video Player Modal with Transcript and Analysis */}
-      {currentlyPlaying && (
+      {currentMeeting && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center overflow-hidden">
           <div className="bg-background p-6 rounded-lg w-full max-w-7xl mx-4 h-[95vh] flex flex-col">
             <div className="flex justify-between items-center mb-4">
               <div>
-              <h3 className="text-xl font-semibold">{currentlyPlaying.title}</h3>
+              <h3 className="text-xl font-semibold">{currentMeeting.title}</h3>
                 <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
-                  <span>Uploaded by {currentlyPlaying.uploadedBy?.name}</span>
+                  <span>Uploaded by {currentMeeting.uploadedBy?.name}</span>
                   <span>•</span>
-                  <span>{currentlyPlaying.uploadedBy?.email}</span>
+                  <span>{currentMeeting.uploadedBy?.email}</span>
                 </div>
               </div>
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={() => setCurrentlyPlaying(null)}
+                onClick={() => setCurrentMeeting(null)}
               >
                 <X className="h-5 w-5" />
               </Button>
@@ -1095,26 +1076,26 @@ export function MainContent({ initialActiveTab, onTabChange }: MainContentProps)
               {/* Left Column: Video and Transcript */}
               <div className="flex flex-col gap-4 min-h-0">
                 <div className="aspect-video bg-black rounded-lg overflow-hidden">
-            {currentlyPlaying.blob?.type.includes('video') ? (
-              <video
-                      ref={mediaRef as React.RefObject<HTMLVideoElement>}
-                src={currentlyPlaying.url}
-                controls
+                  {currentMeeting.blob?.type.includes('video') ? (
+                    <video
+                      ref={audioElement as React.RefObject<HTMLVideoElement>}
+                      src={currentMeeting.url}
+                      controls
                       className="w-full h-full"
                       onTimeUpdate={handleTimeUpdate}
-              />
-            ) : (
+                    />
+                  ) : (
                     <div className="w-full h-full flex items-center justify-center bg-primary/10">
-              <audio
-                        ref={mediaRef as React.RefObject<HTMLAudioElement>}
-                src={currentlyPlaying.url}
-                controls
+                      <audio
+                        ref={audioElement as React.RefObject<HTMLAudioElement>}
+                        src={currentMeeting.url}
+                        controls
                         className="w-full px-4"
                         onTimeUpdate={handleTimeUpdate}
-              />
+                      />
                     </div>
-            )}
-          </div>
+                  )}
+                </div>
                 <div className="bg-muted rounded-lg flex-1 flex flex-col min-h-0 overflow-hidden">
                   <div className="p-4 border-b flex items-center justify-between sticky top-0 bg-muted z-10">
                     <h4 className="text-lg font-semibold">Transcript</h4>
@@ -1124,7 +1105,7 @@ export function MainContent({ initialActiveTab, onTabChange }: MainContentProps)
                           <span className="text-sm font-medium">Processing...</span>
                           <div className="h-2 w-2 rounded-full bg-primary animate-pulse"></div>
                         </>
-                      ) : currentlyPlaying?.wordTimings?.length === 0 ? (
+                      ) : currentMeeting?.wordTimings?.length === 0 ? (
                         <>
                           <span className="text-sm font-medium">Translated</span>
                           <div className="h-2 w-2 rounded-full bg-green-500"></div>
@@ -1138,7 +1119,7 @@ export function MainContent({ initialActiveTab, onTabChange }: MainContentProps)
                     </div>
                   </div>
                   <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
-                    {currentlyPlaying.transcript ? (
+                    {currentMeeting.transcript ? (
                       renderTranscript()
                     ) : (
                       <div className="flex flex-col items-center justify-center h-full text-center">
@@ -1146,10 +1127,10 @@ export function MainContent({ initialActiveTab, onTabChange }: MainContentProps)
                           <FileAudio className="h-6 w-6 text-primary" />
                         </div>
                         <p className="text-muted-foreground">No transcript available</p>
-        </div>
-      )}
-            </div>
-          </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
 
               {/* Right Column: Analysis */}
@@ -1170,40 +1151,37 @@ export function MainContent({ initialActiveTab, onTabChange }: MainContentProps)
                         Tasks
                       </TabsTrigger>
                     </TabsList>
-                      </div>
+                  </div>
 
                   <div className="flex-1 overflow-y-auto custom-scrollbar">
-                    {isAnalyzing ? (
+                    {isLoading ? (
                       <div className="flex items-center justify-center h-full p-4">
                         <div className="flex flex-col items-center gap-4">
                           <Loader2 className="h-8 w-8 animate-spin text-primary" />
                           <p className="text-sm text-muted-foreground">
-                            Analyzing meeting content...
+                            Loading analysis...
                           </p>
+                        </div>
                       </div>
-                    </div>
-                    ) : currentlyPlaying.analysis ? (
-                        <>
+                    ) : currentMeeting.analysis ? (
+                      <>
                         <TabsContent value="discussions" className="p-6 mt-0 focus-visible:outline-none">
                           <div className="prose prose-sm max-w-none dark:prose-invert">
                             <div className="flex items-center justify-between mb-4 sticky top-0 bg-muted/80 backdrop-blur-sm py-2">
                               <h3 className="text-lg font-semibold">Key Discussions & Decisions</h3>
-                          <Button
-                            variant="ghost"
-                            size="sm"
+                              <Button
+                                variant="ghost"
+                                size="sm"
                                 onClick={() => {
-                                  if (isEditing.discussions) {
+                                  if (editingSection === 'discussions') {
                                     handleEditSave('discussions');
                                   } else {
-                                    setEditableContent(prev => ({
-                                      ...prev,
-                                      discussions: currentlyPlaying?.analysis?.discussions || ''
-                                    }));
-                                    setIsEditing(prev => ({ ...prev, discussions: true }));
+                                    setEditContent(currentMeeting?.analysis?.discussions || '');
+                                    setEditingSection('discussions');
                                   }
                                 }}
                               >
-                                {isEditing.discussions ? (
+                                {editingSection === 'discussions' ? (
                                   <>
                                     <Check className="h-4 w-4 mr-2" />
                                     Save
@@ -1214,21 +1192,18 @@ export function MainContent({ initialActiveTab, onTabChange }: MainContentProps)
                                     Edit
                                   </>
                                 )}
-                          </Button>
+                              </Button>
                             </div>
-                            {isEditing.discussions ? (
+                            {editingSection === 'discussions' ? (
                               <textarea
-                                value={editableContent.discussions}
-                                onChange={(e) => setEditableContent(prev => ({
-                                  ...prev,
-                                  discussions: e.target.value
-                                }))}
+                                value={editContent}
+                                onChange={(e) => setEditContent(e.target.value)}
                                 className="w-full h-[500px] p-4 rounded-md border bg-background resize-none focus:outline-none focus:ring-2 focus:ring-primary"
                                 placeholder="Enter key discussions and decisions..."
                               />
                             ) : (
                               <div className="whitespace-pre-wrap">
-                                {currentlyPlaying?.analysis?.discussions || 'No discussions found'}
+                                {currentMeeting?.analysis?.discussions || 'No discussions found'}
                               </div>
                             )}
                           </div>
@@ -1237,71 +1212,19 @@ export function MainContent({ initialActiveTab, onTabChange }: MainContentProps)
                           <div className="prose prose-sm max-w-none dark:prose-invert">
                             <div className="flex items-center justify-between mb-4 sticky top-0 bg-muted/80 backdrop-blur-sm py-2">
                               <h3 className="text-lg font-semibold">Meeting Summary</h3>
-                          <Button
-                            variant="ghost"
-                            size="sm"
+                              <Button
+                                variant="ghost"
+                                size="sm"
                                 onClick={() => {
-                                  if (isEditing.summary) {
+                                  if (editingSection === 'summary') {
                                     handleEditSave('summary');
                                   } else {
-                                    setEditableContent(prev => ({
-                                      ...prev,
-                                      summary: currentlyPlaying?.analysis?.summary || ''
-                                    }));
-                                    setIsEditing(prev => ({ ...prev, summary: true }));
+                                    setEditContent(currentMeeting?.analysis?.summary || '');
+                                    setEditingSection('summary');
                                   }
                                 }}
                               >
-                                {isEditing.summary ? (
-                                  <>
-                                    <Check className="h-4 w-4 mr-2" />
-                                    Save
-                                  </>
-                                ) : (
-                                  <>
-                                    <Edit className="h-4 w-4 mr-2" />
-                                    Edit
-                        </>
-                      )}
-                              </Button>
-                    </div>
-                            {isEditing.summary ? (
-                              <textarea
-                                value={editableContent.summary}
-                                onChange={(e) => setEditableContent(prev => ({
-                                  ...prev,
-                                  summary: e.target.value
-                                }))}
-                                className="w-full h-[500px] p-4 rounded-md border bg-background resize-none focus:outline-none focus:ring-2 focus:ring-primary"
-                                placeholder="Enter meeting summary..."
-                              />
-                            ) : (
-                              <div className="whitespace-pre-wrap">
-                                {currentlyPlaying?.analysis?.summary || 'No summary available'}
-            </div>
-                            )}
-                        </div>
-                        </TabsContent>
-                        <TabsContent value="tasks" className="p-6 mt-0 focus-visible:outline-none">
-                          <div className="prose prose-sm max-w-none dark:prose-invert">
-                            <div className="flex items-center justify-between mb-4 sticky top-0 bg-muted/80 backdrop-blur-sm py-2">
-                              <h3 className="text-lg font-semibold">Action Items & Tasks</h3>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                                onClick={() => {
-                                  if (isEditing.tasks) {
-                                    handleEditSave('tasks');
-                                  } else {
-                                    setEditableContent(prev => ({
-                                      ...prev,
-                                      tasks: currentlyPlaying?.analysis?.tasks || ''
-                                    }));
-                                    setIsEditing(prev => ({ ...prev, tasks: true }));
-                                  }
-                                }}
-                              >
-                                {isEditing.tasks ? (
+                                {editingSection === 'summary' ? (
                                   <>
                                     <Check className="h-4 w-4 mr-2" />
                                     Save
@@ -1312,24 +1235,64 @@ export function MainContent({ initialActiveTab, onTabChange }: MainContentProps)
                                     Edit
                                   </>
                                 )}
-                        </Button>
-                      </div>
-                            {isEditing.tasks ? (
+                              </Button>
+                            </div>
+                            {editingSection === 'summary' ? (
                               <textarea
-                                value={editableContent.tasks}
-                                onChange={(e) => setEditableContent(prev => ({
-                                  ...prev,
-                                  tasks: e.target.value
-                                }))}
+                                value={editContent}
+                                onChange={(e) => setEditContent(e.target.value)}
+                                className="w-full h-[500px] p-4 rounded-md border bg-background resize-none focus:outline-none focus:ring-2 focus:ring-primary"
+                                placeholder="Enter meeting summary..."
+                              />
+                            ) : (
+                              <div className="whitespace-pre-wrap">
+                                {currentMeeting?.analysis?.summary || 'No summary available'}
+                              </div>
+                            )}
+                          </div>
+                        </TabsContent>
+                        <TabsContent value="tasks" className="p-6 mt-0 focus-visible:outline-none">
+                          <div className="prose prose-sm max-w-none dark:prose-invert">
+                            <div className="flex items-center justify-between mb-4 sticky top-0 bg-muted/80 backdrop-blur-sm py-2">
+                              <h3 className="text-lg font-semibold">Action Items & Tasks</h3>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  if (editingSection === 'tasks') {
+                                    handleEditSave('tasks');
+                                  } else {
+                                    setEditContent(currentMeeting?.analysis?.tasks || '');
+                                    setEditingSection('tasks');
+                                  }
+                                }}
+                              >
+                                {editingSection === 'tasks' ? (
+                                  <>
+                                    <Check className="h-4 w-4 mr-2" />
+                                    Save
+                                  </>
+                                ) : (
+                                  <>
+                                    <Edit className="h-4 w-4 mr-2" />
+                                    Edit
+                                  </>
+                                )}
+                              </Button>
+                            </div>
+                            {editingSection === 'tasks' ? (
+                              <textarea
+                                value={editContent}
+                                onChange={(e) => setEditContent(e.target.value)}
                                 className="w-full h-[500px] p-4 rounded-md border bg-background resize-none focus:outline-none focus:ring-2 focus:ring-primary"
                                 placeholder="Enter action items and tasks..."
                               />
                             ) : (
                               <div className="whitespace-pre-wrap">
-                                {currentlyPlaying?.analysis?.tasks || 'No tasks identified'}
-                    </div>
+                                {currentMeeting?.analysis?.tasks || 'No tasks identified'}
+                              </div>
                             )}
-          </div>
+                          </div>
                         </TabsContent>
                       </>
                     ) : (
@@ -1358,11 +1321,11 @@ export function MainContent({ initialActiveTab, onTabChange }: MainContentProps)
             <div className="flex items-center gap-2">
               <BrainCircuit className="h-5 w-5 text-primary" />
               <h3 className="font-semibold">AI Assistant</h3>
-                        </div>
+            </div>
             <Button variant="ghost" size="icon" onClick={handleCloseChat}>
               <X className="h-5 w-5" />
             </Button>
-                      </div>
+          </div>
           
           <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
             {chatState.messages.map((message, index) => (
@@ -1378,15 +1341,15 @@ export function MainContent({ initialActiveTab, onTabChange }: MainContentProps)
                   }`}
                 >
                   <p className="text-sm whitespace-pre-wrap">{message.content}</p>
-                      </div>
-                    </div>
-              ))}
+                </div>
+              </div>
+            ))}
             {chatState.isLoading && (
               <div className="flex justify-start">
                 <div className="bg-muted rounded-lg px-4 py-2">
                   <Loader2 className="h-4 w-4 animate-spin" />
-          </div>
-      </div>
+                </div>
+              </div>
             )}
           </div>
 
@@ -1407,9 +1370,9 @@ export function MainContent({ initialActiveTab, onTabChange }: MainContentProps)
               <Button type="submit" size="icon" disabled={chatState.isLoading}>
                 <Send className="h-4 w-4" />
               </Button>
-          </form>
+            </form>
           </div>
-                        </div>
+        </div>
       )}
     </div>
   );

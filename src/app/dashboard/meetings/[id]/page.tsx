@@ -6,7 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { Meeting, MeetingAnalysis, WordTiming } from "@/types/meeting";
+import { Meeting } from "@/types/meeting";
 import { 
   FileAudio, 
   Clock, 
