@@ -56,7 +56,12 @@ type TabContentProps = {
   isLoading: boolean;
   onTabChange: (tab: TabType) => void;
   isSignedIn: boolean;
-  user: Record<string, unknown>;
+  user: {
+    fullName?: string | null;
+    firstName?: string | null;
+    username?: string | null;
+    primaryEmailAddress?: { emailAddress?: string | null } | null;
+  } | null | undefined;
   fileInputRef: React.RefObject<HTMLInputElement | null>;
   isUploading: boolean;
   isTranscribing: boolean;
