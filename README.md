@@ -1,62 +1,3 @@
-# Iris.ai
-
-
-## Landing Page
-
-![Screenshot 2025-03-07 082534](https://github.com/user-attachments/assets/5242b4d2-3eb0-4cce-bd95-16eb9f3f8e05)
-
-## Authentication
-
-![Screenshot 2025-03-07 082659](https://github.com/user-attachments/assets/ed226721-5350-49c6-a908-cc8445c8938f)
- 
-## Dashboard
-
-![Screenshot 2025-03-07 082901](https://github.com/user-attachments/assets/042e5b18-74fc-4458-9c24-0c8189a9bef8)
-
-## Uploading video screen
-
-![Screenshot 2025-03-07 083006](https://github.com/user-attachments/assets/4c7a7128-0f96-4d16-ac3b-1a1fd759c6d8)
-
-## Real time transcript
-
-![Screenshot 2025-03-07 084526](https://github.com/user-attachments/assets/2c10d0b2-f5bd-494f-9e1d-0147fe44437b)
-
-## Summary
-
-![Screenshot 2025-03-07 084242](https://github.com/user-attachments/assets/7fe18fb3-87e5-4649-bde8-be78ccb6f855)
-
-## Tasks
-
-![Screenshot 2025-03-07 084259](https://github.com/user-attachments/assets/be467733-43b2-463f-a079-ee6c423ad353)
-
-## Discussion < TRANSLATED from French sample>
-
-![Screenshot 2025-03-07 084329](https://github.com/user-attachments/assets/14f754ac-5bdc-417f-b8c3-352a92ee7825)
-
-## AI chatbot (llama3.2)
-
-![Screenshot 2025-03-07 084427](https://github.com/user-attachments/assets/f4752315-b745-4e5f-a480-e6f160d2cb93)
-
-## MEETINGS SCREEN
-
-![Screenshot 2025-03-07 084501](https://github.com/user-attachments/assets/0136f9d6-51bc-4bac-9716-3ba418005b8d)
-
-## All Meetings
-
-
-![Screenshot 2025-03-07 084511](https://github.com/user-attachments/assets/495df72c-cafa-4f74-832c-71f4ea6e3f41)
-
-
-## Settings
-
-
-![Screenshot 2025-03-07 084148](https://github.com/user-attachments/assets/940ffe99-93c9-40e2-a4a6-68ab7dfd3382)
-
-
-
-
-
-
 
 
 
@@ -170,3 +111,57 @@ You can also check out [the Next.js GitHub repository](https://github.com/vercel
 ## Deploy on Vercel
 
 The easiest way to deploy this Next.js application is via the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=cre
+
+# Iris.ai
+
+
+## Landing Page
+
+![Screenshot 2025-03-07 082534](https://github.com/user-attachments/assets/5242b4d2-3eb0-4cce-bd95-16eb9f3f8e05)
+
+## Authentication
+
+![Screenshot 2025-03-07 082659](https://github.com/user-attachments/assets/ed226721-5350-49c6-a908-cc8445c8938f)
+ 
+## Dashboard
+
+![Screenshot 2025-03-07 082901](https://github.com/user-attachments/assets/042e5b18-74fc-4458-9c24-0c8189a9bef8)
+
+## Uploading video screen
+
+![Screenshot 2025-03-07 083006](https://github.com/user-attachments/assets/4c7a7128-0f96-4d16-ac3b-1a1fd759c6d8)
+
+## Real time transcript
+
+![Screenshot 2025-03-07 084526](https://github.com/user-attachments/assets/2c10d0b2-f5bd-494f-9e1d-0147fe44437b)
+
+## Summary
+
+![Screenshot 2025-03-07 084242](https://github.com/user-attachments/assets/7fe18fb3-87e5-4649-bde8-be78ccb6f855)
+
+## Tasks
+
+![Screenshot 2025-03-07 084259](https://github.com/user-attachments/assets/be467733-43b2-463f-a079-ee6c423ad353)
+
+## Discussion < TRANSLATED from French sample>
+
+![Screenshot 2025-03-07 084329](https://github.com/user-attachments/assets/14f754ac-5bdc-417f-b8c3-352a92ee7825)
+
+## AI chatbot (llama3.2)
+
+![Screenshot 2025-03-07 084427](https://github.com/user-attachments/assets/f4752315-b745-4e5f-a480-e6f160d2cb93)
+
+## MEETINGS SCREEN
+
+![Screenshot 2025-03-07 084501](https://github.com/user-attachments/assets/0136f9d6-51bc-4bac-9716-3ba418005b8d)
+
+## All Meetings
+
+
+![Screenshot 2025-03-07 084511](https://github.com/user-attachments/assets/495df72c-cafa-4f74-832c-71f4ea6e3f41)
+
+
+## Settings
+
+
+![Screenshot 2025-03-07 084148](https://github.com/user-attachments/assets/940ffe99-93c9-40e2-a4a6-68ab7dfd3382)
