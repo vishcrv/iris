@@ -134,8 +134,3 @@ pull requests are welcome. feel free to fork, tweak, and build.
 #### settings
 
 ![Screenshot 2025-03-07 084148](https://github.com/user-attachments/assets/940ffe99-93c9-40e2-a4a6-68ab7dfd3382)
-
-```
-
-all lowercase. no emojis. no breakage. hope this hits the vibe perfectly — let me know if you want a `license`, `roadmap`, or `faq` section too.
-```
