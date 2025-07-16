@@ -95,24 +95,8 @@ The following environment variables are required:
 
 Contributions are welcome. Please feel free to submit a pull request.
 
-## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
 
-## Learn More
-
-To learn more about Next.js, check out the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - Learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - Interactive Next.js tutorial.
-
-You can also check out [the Next.js GitHub repository](https://github.com/vercel/next.js) for further contributions and feedback.
-
-## Deploy on Vercel
-
-The easiest way to deploy this Next.js application is via the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=cre
-
-# Iris.ai
 
 
 ## Landing Page
